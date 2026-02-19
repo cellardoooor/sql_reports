@@ -35,17 +35,20 @@ class Incident:
             # Обрабатываем необязательные поля
             validity_hours = data['validity_days'] * 24 if data['validity_days'] else None
             
+            # Логируем параметры для отладки
+            logger.info(f"Inserting event: fio={repr(data.get('fio'))}, tag={repr(data.get('tag'))}")
+            
             cursor.execute("""
                 INSERT INTO incidents (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
                 VALUES (?, ?, ?, ?, ?, ?);
                 SELECT SCOPE_IDENTITY();
             """, (
-                data['fio'],
-                data['event_datetime'],
-                data['tag'],
+                data.get('fio') or '',
+                data.get('event_datetime') or '',
+                data.get('tag') or '',
                 validity_hours,
-                data['event_description'] or '',
-                data['engineer_actions'] or ''
+                data.get('event_description') or '',
+                data.get('engineer_actions') or ''
             ))
             
             incident_id = cursor.fetchone()[0]

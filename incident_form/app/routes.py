@@ -18,7 +18,11 @@ def server_time():
 
 @bp.route('/api/incident', methods=['POST'])
 def create_incident():
-    form = IncidentForm()
+    # Получаем JSON данные и фильтруем null значения
+    json_data = request.get_json() or {}
+    filtered_data = {k: v for k, v in json_data.items() if v is not None}
+    
+    form = IncidentForm(data=filtered_data)
     
     if form.validate_on_submit():
         try:
