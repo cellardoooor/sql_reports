@@ -1,0 +1,227 @@
+Техническая спецификация: Web-форма инцидентов
+1. Архитектура решения
+Стек технологий
+
+    Backend: Python 3.15 + Flask
+    Database: MS SQL Server 15.0.4430.1 (SQL Server 2019) — Native Driver: pyodbc
+    Frontend: HTML5 + vanilla JavaScript (без внешних CDN)
+    Deployment: Исполняемый файл (.exe) через PyInstaller
+    Сервер: Windows Server 2016 (IIS как reverse proxy или прямой запуск)
+
+Структура проекта
+plain
+Copy
+
+incident_form/
+├── app/
+│   ├── __init__.py          # Инициализация Flask-приложения
+│   ├── config.py            # Конфигурация (подключение к БД)
+│   ├── models.py            # Модели данных
+│   ├── routes.py            # Маршруты веб-приложения
+│   ├── forms.py             # Валидация форм (WTForms)
+│   └── templates/
+│       └── index.html       # Единственная страница с формой
+├── static/
+│   ├── css/
+│   │   └── style.css        # Стилизация формы
+│   └── js/
+│       └── main.js          # Клиентская логика
+├── database/
+│   └── schema.sql           # SQL-скрипт создания таблицы
+├── build.py                 # Скрипт сборки исполняемого файла
+├── requirements.txt         # Зависимости Python
+└── run.py                   # Точка входа для разработки
+
+2. Спецификация базы данных
+Таблица: incidents
+Table
+Copy
+Поле	Тип данных	Описание
+id	INT IDENTITY(1,1) PRIMARY KEY	Автоинкрементный ID
+created_at	DATETIME2 DEFAULT GETDATE()	Время создания записи
+fio	NVARCHAR(255) NOT NULL	ФИО (обязательное)
+event_datetime	DATETIME2 NOT NULL	Дата и время события (по умолчанию системное, редактируемое)
+tag	NVARCHAR(50) NOT NULL	Тег из списка
+validity_hours	INT NOT NULL	Время актуальности в часах (дни × 24)
+event_description	NVARCHAR(MAX)	Описание события
+engineer_actions	NVARCHAR(MAX)	Действия инженера
+SQL-скрипт создания
+sql
+Copy
+
+CREATE TABLE incidents (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    fio NVARCHAR(255) NOT NULL,
+    event_datetime DATETIME2 NOT NULL DEFAULT GETDATE(),
+    tag NVARCHAR(50) NOT NULL CHECK (tag IN ('Мониторинг', 'Латенси', 'Информация', 'Массовое', 'ОТМ', 'Veeam')),
+    validity_hours INT NOT NULL,
+    event_description NVARCHAR(MAX),
+    engineer_actions NVARCHAR(MAX)
+);
+
+CREATE INDEX idx_event_datetime ON incidents(event_datetime);
+CREATE INDEX idx_tag ON incidents(tag);
+
+3. Спецификация веб-формы
+Поля формы
+Table
+Copy
+Поле	Тип HTML	Валидация	Особенности
+ФИО	input type="text"	Обязательное, мин. 2 символа	Сохраняется после отправки (localStorage)
+Дата и время	input type="datetime-local"	Обязательное	По умолчанию системное время, можно редактировать
+Тег	select	Обязательное	Опции: Мониторинг, Латенси, Информация, Массовое, ОТМ, Veeam
+Актуальность	input type="number" min="1" max="365"	Обязательное, целое число	В форме — дни, в БД — ×24 часов
+Событие	textarea rows="6"	Обязательное, мин. 10 символов	Многострочное, resize: vertical
+Действия инженера	textarea rows="4"	Обязательное	Многострочное
+Поведение поля "Дата и время"
+
+    При загрузке страницы: Автоматически заполняется текущим системным временем (формат ISO 8601 для datetime-local)
+    Формат отображения: YYYY-MM-DDTHH:MM (локальное время пользователя)
+    Редактирование: Пользователь может изменить значение вручную через нативный picker
+    Валидация: Не допускается выбор будущего времени (опционально: можно разрешить ±1 час для коррекции)
+
+Поведение формы
+
+    ФИО сохраняется: После успешной отправки значение ФИО сохраняется в localStorage и автоматически подставляется при загрузке страницы
+    Дата/время сбрасывается: После отправки возвращается к текущему системному времени
+    Остальные поля сбрасываются: После отправки очищаются (кроме ФИО)
+    Валидация: Клиентская (HTML5) + серверная (WTForms)
+    Уведомления: Toast-уведомления об успехе/ошибке без перезагрузки (AJAX)
+
+4. API Endpoints
+Table
+Copy
+Метод	URL	Описание
+GET	/	Отображение формы
+POST	/api/incident	Создание нового инцидента (JSON)
+GET	/api/server-time	Получение текущего времени сервера (ISO 8601)
+GET	/health	Health-check для мониторинга
+Формат POST-запроса
+JSON
+Copy
+
+{
+    "fio": "Иванов Иван Иванович",
+    "event_datetime": "2024-01-15T14:30:00",
+    "tag": "Мониторинг",
+    "validity_days": 3,
+    "event_description": "Описание события...",
+    "engineer_actions": "Действия инженера..."
+}
+
+Формат ответа
+JSON
+Copy
+
+{
+    "success": true,
+    "message": "Инцидент успешно зарегистрирован",
+    "id": 42
+}
+
+5. Конфигурация и развёртывание
+Переменные окружения (config.py)
+Python
+Copy
+
+# Database
+SQL_SERVER = os.getenv('SQL_SERVER', 'localhost')
+SQL_DATABASE = os.getenv('SQL_DATABASE', 'incidents_db')
+SQL_USER = os.getenv('SQL_USER', 'app_user')
+SQL_PASSWORD = os.getenv('SQL_PASSWORD', '')
+
+# Application
+FLASK_PORT = int(os.getenv('FLASK_PORT', 5000))
+FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
+
+Строка подключения (pyodbc)
+Python
+Copy
+
+conn_str = (
+    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+    f"SERVER={SQL_SERVER};"
+    f"DATABASE={SQL_DATABASE};"
+    f"UID={SQL_USER};"
+    f"PWD={SQL_PASSWORD};"
+    f"TrustServerCertificate=yes;"
+)
+
+Сборка исполняемого файла (build.py)
+
+    Использование PyInstaller с флагом --onefile
+    Включение статических файлов через --add-data
+    Скрытие консоли (--windowed — опционально, если нужен только фоновый процесс)
+    Создание Windows Service (опционально) для автозапуска
+
+Запуск на Windows Server 2016
+
+    Установка ODBC Driver 17 for SQL Server
+    Настройка firewall (порт 5000 или кастомный)
+    Запуск incident_form.exe как службы через NSSM или Task Scheduler
+    (Опционально) Настройка IIS как reverse proxy с URL Rewrite
+
+6. Требования к окружению
+На сервере разработки
+
+    Python 3.15
+    pip
+    virtualenv
+
+На Windows Server 2016 (продакшн)
+
+    ODBC Driver 17 for SQL Server
+    MS SQL Server 15.0.4430.1 (SQL Server 2019)
+    Доступ к БД с правами на INSERT в таблицу incidents
+
+Python-зависимости (requirements.txt)
+plain
+Copy
+
+Flask==3.0.0
+pyodbc==5.0.1
+WTForms==3.1.0
+Flask-WTF==1.2.1
+python-dotenv==1.0.0
+waitress==2.1.2  # WSGI сервер для production
+pyinstaller==6.3.0  # Для сборки .exe
+
+7. Безопасность
+
+    SQL-инъекции: Параметризованные запросы через pyodbc
+    XSS: Экранирование вывода в Jinja2 шаблонах (autoescape)
+    CSRF: Включена защита Flask-WTF
+    Валидация: Двойная (клиент + сервер)
+    Секреты: Хранение в переменных окружения, не в коде
+
+8. Логирование
+
+    Файл logs/app.log с ротацией (10MB × 5 файлов)
+    Логирование всех запросов и ошибок БД
+    Отдельный лог SQL-запросов в режиме DEBUG
+
+9. Особенности реализации поля "Дата и время"
+JavaScript (main.js)
+JavaScript
+Copy
+
+// При загрузке страницы устанавливаем текущее время
+document.addEventListener('DOMContentLoaded', function() {
+    setCurrentDateTime();
+    restoreFIO();
+});
+
+function setCurrentDateTime() {
+    const now = new Date();
+    // Формат для datetime-local: YYYY-MM-DDTHH:MM
+    const formatted = now.toISOString().slice(0, 16);
+    document.getElementById('event_datetime').value = formatted;
+}
+
+// После успешной отправки сбрасываем всё, кроме ФИО, и ставим текущее время
+function resetForm() {
+    document.getElementById('event_datetime').value = new Date().toISOString().slice(0, 16);
+    // ... остальной сброс
+}
