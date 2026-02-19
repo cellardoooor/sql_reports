@@ -28,13 +28,15 @@ async function handleSubmit(e) {
     
     clearErrors();
     
+    const validityDaysValue = document.getElementById('validity_days').value;
+    
     const formData = {
         fio: document.getElementById('fio').value.trim(),
         event_datetime: document.getElementById('event_datetime').value,
         tag: document.getElementById('tag').value,
-        validity_days: parseInt(document.getElementById('validity_days').value),
-        event_description: document.getElementById('event_description').value.trim(),
-        engineer_actions: document.getElementById('engineer_actions').value.trim(),
+        validity_days: validityDaysValue ? parseInt(validityDaysValue) : null,
+        event_description: document.getElementById('event_description').value.trim() || null,
+        engineer_actions: document.getElementById('engineer_actions').value.trim() || null,
         csrf_token: document.querySelector('input[name="csrf_token"]').value
     };
     
@@ -74,7 +76,7 @@ async function handleSubmit(e) {
         console.error('Error:', error);
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Зарегистрировать инцидент';
+        submitBtn.textContent = 'Зарегистрировать событие';
     }
 }
 
@@ -96,18 +98,9 @@ function validateForm(data) {
         isValid = false;
     }
     
-    if (!data.validity_days || data.validity_days < 1 || data.validity_days > 365) {
+    // Проверка актуальности только если заполнено
+    if (data.validity_days !== null && (data.validity_days < 1 || data.validity_days > 365)) {
         showFieldError('validity_days', 'Значение должно быть от 1 до 365');
-        isValid = false;
-    }
-    
-    if (!data.event_description || data.event_description.length < 10) {
-        showFieldError('event_description', 'Описание должно содержать минимум 10 символов');
-        isValid = false;
-    }
-    
-    if (!data.engineer_actions) {
-        showFieldError('engineer_actions', 'Укажите действия инженера');
         isValid = false;
     }
     

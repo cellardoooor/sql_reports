@@ -26,7 +26,7 @@ def create_incident():
                 'fio': form.fio.data,
                 'event_datetime': form.event_datetime.data,
                 'tag': form.tag.data,
-                'validity_days': form.validity_days.data,
+                'validity_days': form.validity_days.data,  # Может быть None
                 'event_description': form.event_description.data,
                 'engineer_actions': form.engineer_actions.data
             }
@@ -37,7 +37,7 @@ def create_incident():
             
             return jsonify({
                 'success': True,
-                'message': 'Инцидент успешно зарегистрирован',
+                'message': 'Событие успешно зарегистрировано',
                 'id': incident_id
             }), 201
             

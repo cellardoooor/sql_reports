@@ -32,6 +32,9 @@ class Incident:
         cursor = conn.cursor()
         
         try:
+            # Обрабатываем необязательные поля
+            validity_hours = data['validity_days'] * 24 if data['validity_days'] else None
+            
             cursor.execute("""
                 INSERT INTO incidents (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
                 VALUES (?, ?, ?, ?, ?, ?);
@@ -40,19 +43,19 @@ class Incident:
                 data['fio'],
                 data['event_datetime'],
                 data['tag'],
-                data['validity_days'] * 24,
-                data['event_description'],
-                data['engineer_actions']
+                validity_hours,
+                data['event_description'] or '',
+                data['engineer_actions'] or ''
             ))
             
             incident_id = cursor.fetchone()[0]
             conn.commit()
-            logger.info(f"Incident created with ID: {incident_id}")
+            logger.info(f"Event created with ID: {incident_id}")
             return incident_id
             
         except pyodbc.Error as e:
             conn.rollback()
-            logger.error(f"Error creating incident: {e}")
+            logger.error(f"Error creating event: {e}")
             raise
         finally:
             cursor.close()
