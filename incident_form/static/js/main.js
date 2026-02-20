@@ -126,7 +126,8 @@ async function handleSubmit(e) {
         const result = await response.json();
         
         if (result.success) {
-            showToast(result.message, 'success');
+            const messageWithId = `${result.message} (ID: ${result.id})`;
+            showToast(messageWithId, 'success');
             saveFIO(formData.fio);
             resetForm();
         } else {

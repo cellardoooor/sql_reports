@@ -137,15 +137,29 @@ class Incident:
             
             row = cursor.fetchone()
             if row:
+                # Преобразуем datetime объекты в строки
+                event_datetime = row[2]
+                created_at = row[7]
+                
+                if hasattr(event_datetime, 'strftime'):
+                    event_datetime_str = event_datetime.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    event_datetime_str = str(event_datetime)
+                
+                if hasattr(created_at, 'strftime'):
+                    created_at_str = created_at.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    created_at_str = str(created_at)
+                
                 return {
                     'id': row[0],
                     'fio': row[1],
-                    'event_datetime': row[2],
+                    'event_datetime': event_datetime_str,
                     'tag': row[3],
                     'validity_hours': row[4],
                     'event_description': row[5],
                     'engineer_actions': row[6],
-                    'created_at': row[7]
+                    'created_at': created_at_str
                 }
             return None
             
