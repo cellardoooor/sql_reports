@@ -102,8 +102,8 @@ class Incident:
             
             cursor.execute("""
                 INSERT INTO incidents (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
+                OUTPUT INSERTED.id
                 VALUES (?, ?, ?, ?, ?, ?);
-                SELECT SCOPE_IDENTITY();
             """, params)
             
             incident_id = cursor.fetchone()[0]

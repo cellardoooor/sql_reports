@@ -40,9 +40,8 @@ async function handleSubmit(e) {
     
     clearErrors();
     
-    const validityDaysValue = document.getElementById('validity_days').value;
-    
     const eventDateTime = getEventDateTime();
+    const validityDaysValue = document.getElementById('validity_days').value;
     
     const formData = {
         fio: document.getElementById('fio').value.trim(),
@@ -169,7 +168,8 @@ function clearErrors() {
 
 function resetForm() {
     setCurrentDateTime();
-    document.getElementById('tag').value = '';
+    document.getElementById('fio').value = '';
+    document.getElementById('tag').value = 'Мониторинг';
     document.getElementById('validity_days').value = '';
     document.getElementById('event_description').value = '';
     document.getElementById('engineer_actions').value = '';
