@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, IntegerField, TextAreaField, DateTimeLocalField
-from wtforms.validators import DataRequired, Length, NumberRange, Optional
+from wtforms import StringField, SelectField, IntegerField, TextAreaField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional, Regexp
 
 class IncidentForm(FlaskForm):
     fio = StringField('ФИО', validators=[
@@ -8,10 +8,12 @@ class IncidentForm(FlaskForm):
         Length(min=2, message='ФИО должно содержать минимум 2 символа')
     ])
     
-    event_datetime = DateTimeLocalField(
+    event_datetime = StringField(
         'Дата и время события',
-        format='%Y-%m-%dT%H:%M',
-        validators=[DataRequired(message='Дата и время обязательны')]
+        validators=[
+            DataRequired(message='Дата и время обязательны'),
+            Regexp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$', message='Неверный формат даты (YYYY-MM-DDTHH:MM)')
+        ]
     )
     
     tag = SelectField('Тег', choices=[

@@ -33,23 +33,28 @@ class Incident:
         
         try:
             # Обрабатываем необязательные поля
-            validity_hours = data['validity_days'] * 24 if data['validity_days'] else None
+            validity_hours = data.get('validity_days') * 24 if data.get('validity_days') else None
             
-            # Логируем параметры для отладки
-            logger.info(f"Inserting event: fio={repr(data.get('fio'))}, tag={repr(data.get('tag'))}")
+            # event_datetime теперь всегда строка
+            event_datetime_str = str(data.get('event_datetime') or '')
+            
+            params = (
+                str(data.get('fio') or ''),           # NVARCHAR
+                event_datetime_str,                    # DATETIME2 как строка
+                str(data.get('tag') or ''),           # NVARCHAR
+                validity_hours,                        # INT (может быть None)
+                str(data.get('event_description') or ''),   # NVARCHAR(MAX)
+                str(data.get('engineer_actions') or '')     # NVARCHAR(MAX)
+            )
+            
+            logger.info(f"SQL params: {params}")
+            logger.info(f"SQL param types: {[type(p).__name__ for p in params]}")
             
             cursor.execute("""
                 INSERT INTO incidents (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
                 VALUES (?, ?, ?, ?, ?, ?);
                 SELECT SCOPE_IDENTITY();
-            """, (
-                data.get('fio') or '',
-                data.get('event_datetime') or '',
-                data.get('tag') or '',
-                validity_hours,
-                data.get('event_description') or '',
-                data.get('engineer_actions') or ''
-            ))
+            """, params)
             
             incident_id = cursor.fetchone()[0]
             conn.commit()
