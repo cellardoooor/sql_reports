@@ -23,7 +23,10 @@
                 <label>Дата и время события *</label>
                 <div class="datetime-inputs">
                     <input type="date" id="event_date" name="event_date" required>
-                    <input type="time" id="event_time" name="event_time" required>
+                    <input type="text" id="event_time" name="event_time" required 
+                           placeholder="HH:MM" maxlength="5"
+                           pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                           title="Формат: ЧЧ:ММ (например: 14:30)">
                 </div>
                 <input type="hidden" id="event_datetime" name="event_datetime">
                 <span class="error" id="event_datetime-error"></span>

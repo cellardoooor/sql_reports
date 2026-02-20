@@ -115,14 +115,17 @@ textarea {
 .datetime-inputs {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .datetime-inputs input[type="date"] {
     flex: 1.5;
 }
 
-.datetime-inputs input[type="time"] {
+.datetime-inputs input[type="text"] {
     flex: 1;
+    min-width: 80px;
+    text-align: center;
 }
 
 .toast {

@@ -9,9 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function setCurrentDateTime() {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
     document.getElementById('event_date').value = dateStr;
-    document.getElementById('event_time').value = timeStr;
+    document.getElementById('event_time').value = `${hours}:${minutes}`;
 }
 
 function getEventDateTime() {
@@ -115,6 +116,22 @@ function validateForm(data) {
     if (data.validity_days !== null && (data.validity_days < 1 || data.validity_days > 365)) {
         showFieldError('validity_days', 'Значение должно быть от 1 до 365');
         isValid = false;
+    }
+    
+    // Проверка формата времени (должен быть HH:MM, 24-часовой)
+    if (data.event_datetime) {
+        const timeMatch = data.event_datetime.match(/T(\d{2}):(\d{2})$/);
+        if (!timeMatch) {
+            showFieldError('event_datetime', 'Неверный формат времени (ЧЧ:ММ, например: 14:30)');
+            isValid = false;
+        } else {
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            if (hours > 23 || minutes > 59) {
+                showFieldError('event_datetime', 'Неверное время (часы: 00-23, минуты: 00-59)');
+                isValid = false;
+            }
+        }
     }
     
     return isValid;
