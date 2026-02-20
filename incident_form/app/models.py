@@ -101,7 +101,7 @@ class Incident:
             logger.info(f"SQL param types: {[type(p).__name__ for p in params]}")
             
             cursor.execute("""
-                INSERT INTO incidents (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
+                INSERT INTO DS_reports (fio, event_datetime, tag, validity_hours, event_description, engineer_actions)
                 OUTPUT INSERTED.id
                 VALUES (?, ?, ?, ?, ?, ?);
             """, params)
@@ -114,6 +114,94 @@ class Incident:
         except Exception as e:
             conn.rollback()
             logger.error(f"Error creating event: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
+            raise
+        finally:
+            cursor.close()
+
+    @staticmethod
+    def get_by_id(incident_id):
+        """Получить запись по ID"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("""
+                SELECT id, fio, event_datetime, tag, validity_hours, 
+                       event_description, engineer_actions, created_at
+                FROM DS_reports
+                WHERE id = ?
+            """, (incident_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'fio': row[1],
+                    'event_datetime': row[2],
+                    'tag': row[3],
+                    'validity_hours': row[4],
+                    'event_description': row[5],
+                    'engineer_actions': row[6],
+                    'created_at': row[7]
+                }
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error fetching incident {incident_id}: {e}")
+            raise
+        finally:
+            cursor.close()
+
+    @staticmethod
+    def update(incident_id, data):
+        """Обновить существующую запись"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Обрабатываем необязательные поля
+            validity_hours = data.get('validity_days') * 24 if data.get('validity_days') else None
+            
+            # event_datetime: преобразуем из YYYY-MM-DDTHH:MM в YYYY-MM-DD HH:MM:SS
+            event_datetime_raw = data.get('event_datetime') or ''
+            if event_datetime_raw and 'T' in str(event_datetime_raw):
+                event_datetime_str = str(event_datetime_raw).replace('T', ' ') + ':00'
+            else:
+                event_datetime_str = str(event_datetime_raw)
+            
+            params = (
+                str(data.get('fio') or ''),
+                event_datetime_str,
+                str(data.get('tag') or ''),
+                validity_hours,
+                str(data.get('event_description') or ''),
+                str(data.get('engineer_actions') or ''),
+                incident_id
+            )
+            
+            logger.info(f"UPDATE params: {params}")
+            
+            cursor.execute("""
+                UPDATE DS_reports
+                SET fio = ?, 
+                    event_datetime = ?, 
+                    tag = ?, 
+                    validity_hours = ?, 
+                    event_description = ?, 
+                    engineer_actions = ?
+                WHERE id = ?
+            """, params)
+            
+            conn.commit()
+            logger.info(f"Incident {incident_id} updated successfully")
+            return incident_id
+            
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Error updating incident {incident_id}: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             import traceback
             logger.error(f"Traceback:\n{traceback.format_exc()}")

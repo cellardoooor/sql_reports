@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const form = document.getElementById('incidentForm');
     form.addEventListener('submit', handleSubmit);
+    
+    const idField = document.getElementById('incident_id');
+    idField.addEventListener('blur', loadIncidentData);
 });
 
 function setCurrentDateTime() {
@@ -35,6 +38,54 @@ function saveFIO(fio) {
     localStorage.setItem('incident_fio', fio);
 }
 
+async function loadIncidentData() {
+    const idField = document.getElementById('incident_id');
+    const incidentId = idField.value;
+    
+    if (!incidentId) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/incident/${incidentId}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                fillFormWithData(data.data);
+                showToast('Данные загружены', 'success');
+            }
+        }
+        // Если не найдено - ничего не делаем, молча продолжаем
+    } catch (error) {
+        console.error('Error loading incident:', error);
+    }
+}
+
+function fillFormWithData(data) {
+    document.getElementById('fio').value = data.fio || '';
+    document.getElementById('tag').value = data.tag || 'Мониторинг';
+    
+    // Разбор даты и времени
+    if (data.event_datetime) {
+        const datetimeStr = data.event_datetime;
+        // Формат: "2026-02-20 11:18:00" или "2026-02-20T11:18:00"
+        const parts = datetimeStr.replace('T', ' ').split(' ');
+        document.getElementById('event_date').value = parts[0];
+        document.getElementById('event_time').value = parts[1].substring(0, 5);
+    }
+    
+    // Обратный расчет validity_days из validity_hours
+    if (data.validity_hours) {
+        document.getElementById('validity_days').value = Math.floor(data.validity_hours / 24);
+    } else {
+        document.getElementById('validity_days').value = '';
+    }
+    
+    document.getElementById('event_description').value = data.event_description || '';
+    document.getElementById('engineer_actions').value = data.engineer_actions || '';
+}
+
 async function handleSubmit(e) {
     e.preventDefault();
     
@@ -42,8 +93,10 @@ async function handleSubmit(e) {
     
     const eventDateTime = getEventDateTime();
     const validityDaysValue = document.getElementById('validity_days').value;
+    const incidentId = document.getElementById('incident_id').value;
     
     const formData = {
+        incident_id: incidentId ? parseInt(incidentId) : null,
         fio: document.getElementById('fio').value.trim(),
         event_datetime: eventDateTime,
         tag: document.getElementById('tag').value,
@@ -167,6 +220,7 @@ function clearErrors() {
 }
 
 function resetForm() {
+    document.getElementById('incident_id').value = '';
     setCurrentDateTime();
     document.getElementById('fio').value = '';
     document.getElementById('tag').value = 'Мониторинг';

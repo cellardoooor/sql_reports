@@ -17,13 +17,38 @@ def server_time():
         'datetime': datetime.now().isoformat()
     })
 
+@bp.route('/api/incident/<int:id>', methods=['GET'])
+def get_incident(id):
+    """Получить данные инцидента по ID"""
+    try:
+        incident = Incident.get_by_id(id)
+        if incident:
+            return jsonify({
+                'success': True,
+                'data': incident
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Запись не найдена'
+            }), 404
+    except Exception as e:
+        current_app.logger.error(f"Error fetching incident {id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Ошибка при получении данных'
+        }), 500
+
 @bp.route('/api/incident', methods=['POST'])
 def create_incident():
     # Получаем JSON данные и фильтруем null значения
     json_data = request.get_json() or {}
     current_app.logger.info(f"Received JSON data: {json_data}")
     
-    filtered_data = {k: v for k, v in json_data.items() if v is not None}
+    # Извлекаем incident_id отдельно
+    incident_id = json_data.get('incident_id')
+    
+    filtered_data = {k: v for k, v in json_data.items() if v is not None and k != 'incident_id'}
     current_app.logger.info(f"Filtered data (no nulls): {filtered_data}")
     
     # Используем MultiDict для передачи в форму
@@ -42,20 +67,40 @@ def create_incident():
                 'engineer_actions': form.engineer_actions.data
             }
             
-            current_app.logger.info(f"Data to insert: {data}")
+            current_app.logger.info(f"Data to insert/update: {data}, incident_id={incident_id}")
             
-            incident_id = Incident.create(data)
-            
-            current_app.logger.info(f"Incident {incident_id} created successfully")
-            
-            return jsonify({
-                'success': True,
-                'message': 'Событие успешно зарегистрировано',
-                'id': incident_id
-            }), 201
+            # Если указан ID и запись существует - обновляем
+            if incident_id:
+                existing = Incident.get_by_id(incident_id)
+                if existing:
+                    Incident.update(incident_id, data)
+                    current_app.logger.info(f"Incident {incident_id} updated successfully")
+                    return jsonify({
+                        'success': True,
+                        'message': 'Запись успешно обновлена',
+                        'id': incident_id
+                    }), 200
+                else:
+                    # Если ID указан но не существует - создаем новую
+                    current_app.logger.info(f"Incident ID {incident_id} not found, creating new record")
+                    new_id = Incident.create(data)
+                    return jsonify({
+                        'success': True,
+                        'message': 'Событие успешно зарегистрировано (создана новая запись)',
+                        'id': new_id
+                    }), 201
+            else:
+                # ID не указан - создаем новую запись
+                new_id = Incident.create(data)
+                current_app.logger.info(f"Incident {new_id} created successfully")
+                return jsonify({
+                    'success': True,
+                    'message': 'Событие успешно зарегистрировано',
+                    'id': new_id
+                }), 201
             
         except Exception as e:
-            current_app.logger.error(f"Error creating incident: {str(e)}")
+            current_app.logger.error(f"Error creating/updating incident: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': 'Ошибка при сохранении в базу данных',

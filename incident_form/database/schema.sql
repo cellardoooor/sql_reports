@@ -1,4 +1,4 @@
-CREATE TABLE incidents (
+CREATE TABLE DS_reports (
     id INT IDENTITY(1,1) PRIMARY KEY,
     created_at DATETIME2 DEFAULT GETDATE(),
     fio NVARCHAR(255) NOT NULL,
@@ -9,5 +9,5 @@ CREATE TABLE incidents (
     engineer_actions NVARCHAR(MAX)
 );
 
-CREATE INDEX idx_event_datetime ON incidents(event_datetime);
-CREATE INDEX idx_tag ON incidents(tag);
+CREATE INDEX idx_event_datetime ON DS_reports(event_datetime);
+CREATE INDEX idx_tag ON DS_reports(tag);
