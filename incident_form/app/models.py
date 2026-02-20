@@ -35,8 +35,12 @@ class Incident:
             # Обрабатываем необязательные поля
             validity_hours = data.get('validity_days') * 24 if data.get('validity_days') else None
             
-            # event_datetime теперь всегда строка
-            event_datetime_str = str(data.get('event_datetime') or '')
+            # event_datetime: преобразуем из YYYY-MM-DDTHH:MM в YYYY-MM-DD HH:MM:SS
+            event_datetime_raw = data.get('event_datetime') or ''
+            if event_datetime_raw and 'T' in str(event_datetime_raw):
+                event_datetime_str = str(event_datetime_raw).replace('T', ' ') + ':00'
+            else:
+                event_datetime_str = str(event_datetime_raw)
             
             params = (
                 str(data.get('fio') or ''),           # NVARCHAR

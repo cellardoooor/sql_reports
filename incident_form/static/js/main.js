@@ -8,17 +8,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setCurrentDateTime() {
     const now = new Date();
-    const formatted = toLocalDateTimeString(now);
-    document.getElementById('event_datetime').value = formatted;
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('event_date').value = dateStr;
+    document.getElementById('event_time').value = timeStr;
 }
 
-function toLocalDateTimeString(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+function getEventDateTime() {
+    const date = document.getElementById('event_date').value;
+    const time = document.getElementById('event_time').value;
+    if (date && time) {
+        return `${date}T${time}`;
+    }
+    return '';
 }
 
 function restoreFIO() {
@@ -39,9 +41,11 @@ async function handleSubmit(e) {
     
     const validityDaysValue = document.getElementById('validity_days').value;
     
+    const eventDateTime = getEventDateTime();
+    
     const formData = {
         fio: document.getElementById('fio').value.trim(),
-        event_datetime: document.getElementById('event_datetime').value,
+        event_datetime: eventDateTime,
         tag: document.getElementById('tag').value,
         validity_days: validityDaysValue ? parseInt(validityDaysValue) : null,
         event_description: document.getElementById('event_description').value.trim() || null,
@@ -126,6 +130,14 @@ function showFieldError(fieldName, message) {
     if (inputElement) {
         inputElement.style.borderColor = '#e74c3c';
     }
+    
+    // Special handling for datetime errors
+    if (fieldName === 'event_datetime') {
+        const dateElement = document.getElementById('event_date');
+        const timeElement = document.getElementById('event_time');
+        if (dateElement) dateElement.style.borderColor = '#e74c3c';
+        if (timeElement) timeElement.style.borderColor = '#e74c3c';
+    }
 }
 
 function clearErrors() {
@@ -139,7 +151,7 @@ function clearErrors() {
 }
 
 function resetForm() {
-    document.getElementById('event_datetime').value = toLocalDateTimeString(new Date());
+    setCurrentDateTime();
     document.getElementById('tag').value = '';
     document.getElementById('validity_days').value = '';
     document.getElementById('event_description').value = '';

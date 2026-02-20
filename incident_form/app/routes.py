@@ -30,7 +30,7 @@ def create_incident():
     form = IncidentForm(formdata=MultiDict(filtered_data))
     current_app.logger.info(f"Form data after processing: fio={form.fio.data}, datetime={form.event_datetime.data}, tag={form.tag.data}")
     
-    if form.validate_on_submit():
+    if form.validate():
         current_app.logger.info("Form validation passed")
         try:
             data = {
