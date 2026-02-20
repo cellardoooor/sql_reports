@@ -11,7 +11,16 @@ class Database:
     def get_connection(self):
         if self.conn is None or self.conn.closed:
             try:
-                self.conn = pyodbc.connect(current_app.config['DATABASE_CONNECTION_STRING'])
+                conn_str = (
+                    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                    f"SERVER={current_app.config['SQL_SERVER']};"
+                    f"DATABASE={current_app.config['SQL_DATABASE']};"
+                    f"UID={current_app.config['SQL_USER']};"
+                    f"PWD={current_app.config['SQL_PASSWORD']};"
+                    f"TrustServerCertificate=yes;"
+                )
+                logger.info(f"Connecting to SQL Server: {current_app.config['SQL_SERVER']}")
+                self.conn = pyodbc.connect(conn_str)
                 logger.info("Database connection established")
             except pyodbc.Error as e:
                 logger.error(f"Database connection error: {e}")
